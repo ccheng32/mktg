@@ -1,5 +1,5 @@
 DEBUG=n
-CPPFLAGS=-fopenmp --std=c++14 -Wall
+CPPFLAGS=-fopenmp --std=c++11 -Wall
 
 ifeq ($(DEBUG),n)
 	CPPFLAGS+= -O3
