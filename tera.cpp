@@ -74,12 +74,12 @@ std::vector<node_t> graph::tera(size_t k, size_t n) {
 
     struct timeval end;
     gettimeofday(&end, NULL);
-    //#ifdef DEBUG
+    #ifdef DEBUG
     printf("removing node %u with tnum %lu, time: %lf\n", max_triangle_node,
            max_triangle_number, (1000000.0 * (end.tv_sec - start.tv_sec) +
                                  end.tv_usec - start.tv_usec) /
                                     1000000.0);
-    //#endif
+    #endif
   }
 
   restore_adj_list();

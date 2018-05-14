@@ -1,5 +1,8 @@
 #include <cstdio>
+#include <iostream>
+#include <algorithm>
 #include "graph.h"
+
 int main(int argc, char** argv) {
   char* graph_filename;
   size_t k, n;
@@ -15,6 +18,14 @@ int main(int argc, char** argv) {
 
   graph g(graph_filename);
   auto ans = g.tera(k, n);
+
+  std::sort(ans.begin(), ans.end());
+
+  printf("candidates:\n");
+  for (auto member : ans) {
+    std::cout << member << " ";    
+  }
+  std::cout << std::endl;
 
   return 0;
 }
