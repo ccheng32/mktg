@@ -13,6 +13,10 @@ static void add_edge_gen(
   }
 }
 
+void graph::make_adj_list_copy() { adj_list_copy = adj_list; }
+
+void graph::restore_adj_list() { adj_list = adj_list = adj_list_copy; }
+
 void graph::add_undirected_edge(node_t a, node_t b) {
   add_edge_gen(a, b, this->adj_list);
   add_edge_gen(b, a, this->adj_list);
@@ -27,13 +31,24 @@ static void add_undirected_edge_k(
   }
 }
 
-void graph::remove_node_k(node_t node) {
-  adj_list_k.erase(node);
-  for (auto iter = adj_list_k.begin(); iter != adj_list_k.end(); iter++) {
+size_t graph::get_degree(node_t node) const {
+  auto iter = adj_list.find(node);
+  return iter == adj_list.end() ? 0 : iter->second.size();
+}
+
+void remove_node_gen(
+    node_t node,
+    std::unordered_map<node_t, std::unordered_set<node_t>>& adj_list) {
+  adj_list.erase(node);
+  for (auto iter = adj_list.begin(); iter != adj_list.end(); iter++) {
     iter->second.erase(node);
   }
   return;
 }
+
+void graph::remove_node_k(node_t node) { remove_node_gen(node, adj_list_k); }
+
+void graph::remove_node(node_t node) { remove_node_gen(node, adj_list); }
 
 std::vector<node_t> get_nodes_gen(
     std::unordered_map<node_t, std::unordered_set<node_t>> adj_list) {
@@ -64,12 +79,6 @@ graph::graph(char* filename) {
   adj_list_k = adj_list;
 
   fclose(graph_file);
-}
-
-graph::graph() {
-  k = 1;
-  adj_list.clear();
-  adj_list_k.clear();
 }
 
 static bool has_edge_gen(
