@@ -54,7 +54,7 @@ __global__ void _cuda_generate_k_triangles(
       triangle.a = node;
       triangle.b = edge.a;
       triangle.c = edge.b;
-//    triangles[ti] = triangle;
+      //    triangles[ti] = triangle;
     }
   }
 }

@@ -1,4 +1,5 @@
 #include "graph.h"
+#include <sys/time.h>
 #include <cstdio>
 #include <queue>
 #include "cuda_graph.h"
@@ -263,8 +264,14 @@ void graph::generate_k_triangles() {
   auto nodes = get_nodes();
 
   // GPU TESTING START
+  struct timeval start, end;
+  gettimeofday(&start, NULL);
   auto k_triangles_gpu = k_triangles;
   cuda_generate_k_triangles(nodes, edge_list_k, k_triangles_gpu);
+  gettimeofday(&end, NULL);
+  printf("in %lf seconds\n", (1000000.0 * (end.tv_sec - start.tv_sec) +
+                              end.tv_usec - start.tv_usec) /
+                                 1000000.0);
 // GPU TESTING END
 
 #pragma omp parallel for schedule(dynamic)
@@ -287,7 +294,11 @@ void graph::generate_k_triangles() {
       }
     }
   }
-  printf("cpu %lu triangles\n", k_triangles.size());
+  gettimeofday(&start, NULL);
+  printf(
+      "cpu %lu triangles in %lf seconds\n", k_triangles.size(),
+      (1000000.0 * (start.tv_sec - end.tv_sec) + start.tv_usec - end.tv_usec) /
+          1000000.0);
 
   for (auto triangle : k_triangles) {
     increment_node_triangle_count(std::get<0>(triangle), triangles_per_node);
