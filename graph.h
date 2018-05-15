@@ -1,3 +1,5 @@
+#ifndef GRAPH
+#define GRAPH
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -31,3 +33,5 @@ class graph {
   std::unordered_map<node_t, size_t> triangles_per_node;
   std::vector<std::tuple<node_t, node_t, node_t>> k_triangles;
 };
+
+#endif
