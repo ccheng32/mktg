@@ -14,7 +14,7 @@ std::vector<node_t> graph::tera(size_t k, size_t n) {
     size_t max_triangle_number = 0;
     node_t max_triangle_node = adj_list_k.cbegin()->first;
 
-#pragma omp parallel num_threads(1)
+#pragma omp parallel
     {
       size_t local_max_triangle_number = 0;
       node_t local_max_triangle_node = adj_list_k.cbegin()->first;

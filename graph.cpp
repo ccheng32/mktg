@@ -68,6 +68,9 @@ void decrement_node_triangle_count(
     return;
   } else {
     iter->second--;
+    if (iter->second == 0) {
+      triangles_per_node.erase(iter);
+    }
   }
 }
 
