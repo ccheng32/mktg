@@ -18,7 +18,6 @@ class graph {
   void add_undirected_edge(node_t a, node_t b);
   void graph_k(size_t newk);
   void generate_k_triangles();
-  std::vector<node_t> get_nodes_k() const;
   size_t triangle_number(node_t node) const;
   bool has_edge_k(node_t a, node_t b) const;
   void remove_node(node_t node);

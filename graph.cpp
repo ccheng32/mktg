@@ -82,7 +82,6 @@ static void quick_delete_triangle(
 
 void graph::remove_node(node_t node) {
   remove_node_gen(node, adj_list);
-  remove_node_gen(node, adj_list_k);
 
   // update triangles and triangle number
   std::vector<size_t> remove_indices;
@@ -121,10 +120,6 @@ std::vector<node_t> get_nodes_gen(
 }
 
 std::vector<node_t> graph::get_nodes() const { return get_nodes_gen(adj_list); }
-
-std::vector<node_t> graph::get_nodes_k() const {
-  return get_nodes_gen(adj_list_k);
-}
 
 graph::graph(char* filename) {
   FILE* graph_file = fopen(filename, "r");
@@ -265,7 +260,7 @@ void graph::generate_k_triangles() {
   triangles_per_node.clear();
   auto edge_list_k = get_edge_list_k();
   auto nodes = get_nodes();
-#pragma omp parallel for
+#pragma omp parallel for schedule(dynamic)
   for (auto node_it = nodes.cbegin(); node_it < nodes.cend(); node_it++) {
     node_t node = *node_it;
     for (auto edge = edge_list_k.cbegin(); edge < edge_list_k.cend(); edge++) {
