@@ -278,11 +278,16 @@ void graph::generate_k_triangles() {
           {
             k_triangles.push_back(
                 std::make_tuple(node, (*edge).first, (*edge).second));
+#ifdef DEBUG
+            printf("cpu triangle: %u %u %u\n", node, (*edge).first,
+                   (*edge).second);
+#endif
           }
         }
       }
     }
   }
+  printf("cpu %lu triangles\n", k_triangles.size());
 
   for (auto triangle : k_triangles) {
     increment_node_triangle_count(std::get<0>(triangle), triangles_per_node);
