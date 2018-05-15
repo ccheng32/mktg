@@ -17,7 +17,7 @@ void graph::make_adj_list_copy() { adj_list_copy = adj_list; }
 
 void graph::restore_adj_list() { adj_list = adj_list = adj_list_copy; }
 
-size_t graph::triangle_number(node_t node) {
+size_t graph::triangle_number(node_t node) const {
   auto iter = triangles_per_node.find(node);
   if (iter == triangles_per_node.end()) {
     return 0;

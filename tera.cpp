@@ -14,7 +14,7 @@ std::vector<node_t> graph::tera(size_t k, size_t n) {
     size_t max_triangle_number = 0;
     node_t max_triangle_node = adj_list_k.cbegin()->first;
 
-#pragma omp parallel
+#pragma omp parallel num_threads(1)
     {
       size_t local_max_triangle_number = 0;
       node_t local_max_triangle_node = adj_list_k.cbegin()->first;
@@ -56,12 +56,12 @@ std::vector<node_t> graph::tera(size_t k, size_t n) {
 
     struct timeval end;
     gettimeofday(&end, NULL);
-#ifdef DEBUG
-    printf("removing node %u with tnum %lu, time: %lf\n", max_triangle_node,
+//#ifdef DEBUG
+    printf("removing node %u with tnum %lu, time: %lf, score: %lf\n", max_triangle_node,
            max_triangle_number, (1000000.0 * (end.tv_sec - start.tv_sec) +
                                  end.tv_usec - start.tv_usec) /
-                                    1000000.0);
-#endif
+                                    1000000.0, (double)k_triangles.size() / ans.size());
+//#endif
   }
 
   restore_adj_list();
