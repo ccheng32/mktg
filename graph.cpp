@@ -274,23 +274,30 @@ void graph::generate_k_triangles() {
                                  1000000.0);
 // GPU TESTING END
 
-#pragma omp parallel for schedule(dynamic)
-  for (auto node_it = nodes.cbegin(); node_it < nodes.cend(); node_it++) {
-    node_t node = *node_it;
-    for (auto edge = edge_list_k.cbegin(); edge < edge_list_k.cend(); edge++) {
-      if (node > (*edge).first) {
-        if (has_edge_k(node, (*edge).first) &&
-            has_edge_k(node, (*edge).second)) {
-#pragma omp critical
-          {
-            k_triangles.push_back(
+#pragma omp parallel
+  {
+    std::vector<std::tuple<node_t, node_t, node_t>> local_k_triangles;
+#pragma omp for schedule(dynamic)
+    for (auto node_it = nodes.cbegin(); node_it < nodes.cend(); node_it++) {
+      node_t node = *node_it;
+      for (auto edge = edge_list_k.cbegin(); edge < edge_list_k.cend();
+           edge++) {
+        if (node > (*edge).first) {
+          if (has_edge_k(node, (*edge).first) &&
+              has_edge_k(node, (*edge).second)) {
+            local_k_triangles.push_back(
                 std::make_tuple(node, (*edge).first, (*edge).second));
-#ifdef DEBUG
-            printf("cpu triangle: %u %u %u\n", node, (*edge).first,
-                   (*edge).second);
-#endif
           }
         }
+      }
+    }
+#pragma omp critical
+    {
+      for (auto tri : local_k_triangles) {
+        k_triangles.push_back(tri);
+#ifdef DEBUG
+        printf("cpu triangle: %u %u %u\n", node, (*edge).first, (*edge).second);
+#endif
       }
     }
   }
