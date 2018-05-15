@@ -1,6 +1,7 @@
 #include "graph.h"
 #include <cstdio>
 #include <queue>
+#include "cuda_graph.h"
 
 static void add_edge_gen(
     node_t a, node_t b,
@@ -260,6 +261,12 @@ void graph::generate_k_triangles() {
   triangles_per_node.clear();
   auto edge_list_k = get_edge_list_k();
   auto nodes = get_nodes();
+
+  // GPU TESTING START
+  auto k_triangles_gpu = k_triangles;
+  cuda_generate_k_triangles(nodes, edge_list_k, k_triangles_gpu);
+// GPU TESTING END
+
 #pragma omp parallel for schedule(dynamic)
   for (auto node_it = nodes.cbegin(); node_it < nodes.cend(); node_it++) {
     node_t node = *node_it;
