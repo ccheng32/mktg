@@ -174,7 +174,7 @@ void graph::graph_k(size_t newk) {
     std::queue<node_t> bfs_q;
     std::unordered_map<node_t, std::vector<node_t>> edges;
 
-#pragma omp for
+#pragma omp for schedule (dynamic)
     for (auto iter = nodes.cbegin(); iter < nodes.cend(); iter++) {
       node_t center_node = *iter;
 
@@ -272,6 +272,7 @@ void graph::generate_k_triangles() {
   printf("in %lf seconds\n", (1000000.0 * (end.tv_sec - start.tv_sec) +
                               end.tv_usec - start.tv_usec) /
                                  1000000.0);
+  exit(0);
 // GPU TESTING END
 
 #pragma omp parallel

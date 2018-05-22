@@ -46,7 +46,7 @@ graph.o: graph.cpp graph.h cuda_graph.h
 	$(CC) $(CPPFLAGS) -c graph.cpp
 
 cuda_generate_k_triangles.o: cuda_generate_k_triangles.cu cuda_graph.h graph.h
-	$(NVCC) $(NVCCFLAGS) -c --gpu-architecture=$(CUDACC) cuda_generate_k_triangles.cu
+	$(NVCC) $(NVCCFLAGS) -lineinfo -c --gpu-architecture=$(CUDACC) cuda_generate_k_triangles.cu
 
 
 clean:
