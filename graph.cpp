@@ -110,18 +110,14 @@ void graph::remove_node(node_t node) {
   }
 }
 
-std::vector<node_t> get_nodes_gen(
-    const std::unordered_map<node_t, std::unordered_set<node_t>>& adj_list) {
-  std::vector<node_t> v_nodes(adj_list.size());
+void graph::get_nodes(std::vector<node_t>& v_nodes) const {
+  v_nodes.resize(adj_list.size());
   size_t i = 0;
   for (auto iter = adj_list.cbegin(); iter != adj_list.cend(); iter++) {
     v_nodes[i] = iter->first;
     i++;
   }
-  return v_nodes;
 }
-
-std::vector<node_t> graph::get_nodes() const { return get_nodes_gen(adj_list); }
 
 graph::graph(char* filename) {
   FILE* graph_file = fopen(filename, "r");
@@ -166,7 +162,8 @@ void graph::graph_k(size_t newk) {
     this->k = newk;
   }
 
-  std::vector<node_t> nodes = get_nodes();
+  std::vector<node_t> nodes;
+  get_nodes(nodes);
 
 #pragma omp parallel
   {
@@ -174,7 +171,7 @@ void graph::graph_k(size_t newk) {
     std::queue<node_t> bfs_q;
     std::unordered_map<node_t, std::vector<node_t>> edges;
 
-#pragma omp for schedule (dynamic)
+#pragma omp for schedule(dynamic)
     for (auto iter = nodes.cbegin(); iter < nodes.cend(); iter++) {
       node_t center_node = *iter;
 
@@ -225,9 +222,10 @@ void graph::graph_k(size_t newk) {
   return;
 }
 
-std::vector<std::pair<node_t, node_t>> graph::get_edge_list_k() const {
-  std::vector<std::pair<node_t, node_t>> ans;
-  const auto nodes = get_nodes();
+void graph::get_edge_list_k(std::vector<std::pair<node_t, node_t>>& ans) const {
+  ans.clear();
+  std::vector<node_t> nodes;
+  get_nodes(nodes);
   for (auto node_it = nodes.cbegin(); node_it < nodes.cend(); node_it++) {
     node_t node = *node_it;
     auto iter = adj_list_k.find(node);
@@ -244,7 +242,6 @@ std::vector<std::pair<node_t, node_t>> graph::get_edge_list_k() const {
 #ifdef DEBUG
   printf("k-hop edge list generated\n");
 #endif
-  return ans;
 }
 
 void increment_node_triangle_count(
@@ -260,8 +257,13 @@ void increment_node_triangle_count(
 void graph::generate_k_triangles() {
   k_triangles.clear();
   triangles_per_node.clear();
-  auto edge_list_k = get_edge_list_k();
-  auto nodes = get_nodes();
+
+  // get a copy of the k hop graph in edge list form
+  std::vector<std::pair<node_t, node_t>> edge_list_k;
+  get_edge_list_k(edge_list_k);
+
+  std::vector<node_t> nodes;
+  get_nodes(nodes);
 
   // GPU TESTING START
   struct timeval start, end;
@@ -272,7 +274,6 @@ void graph::generate_k_triangles() {
   printf("in %lf seconds\n", (1000000.0 * (end.tv_sec - start.tv_sec) +
                               end.tv_usec - start.tv_usec) /
                                  1000000.0);
-  exit(0);
 // GPU TESTING END
 
 #pragma omp parallel
@@ -296,9 +297,6 @@ void graph::generate_k_triangles() {
     {
       for (auto tri : local_k_triangles) {
         k_triangles.push_back(tri);
-#ifdef DEBUG
-        printf("cpu triangle: %u %u %u\n", node, (*edge).first, (*edge).second);
-#endif
       }
     }
   }

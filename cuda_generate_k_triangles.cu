@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <limits>
 #include "cuda_graph.h"
 #define BLOCK_DIM_Y 8
@@ -7,7 +8,7 @@
 #endif
 
 #define NODE_TRIANGLE_RATIO 1000
-#define EDGES_PER_THREAD 1   
+#define EDGES_PER_THREAD 1
 
 #define gpuErrchk(ans) \
   { gpuAssert((ans), __FILE__, __LINE__); }
@@ -19,14 +20,26 @@ inline void gpuAssert(cudaError_t code, const char* file, int line,
     if (abort) exit(code);
   }
 }
+
 __device__ bool __edge_exist(node_t a, node_t b, const cuda_edge_t* edges,
                              size_t node_start, size_t node_degree) {
-  for (int ei = node_start; ei < node_start + node_degree; ei++) {
-    cuda_edge_t edge = edges[ei];
-    if (edge.a == a && edge.b == b) {
-      return true;
-    }
+  int l = node_start;
+  int r = node_start + node_degree;
+  while (l <= r) {
+    int m = l + (r - l) / 2;
+    auto edge = edges[m];
+
+    // Check if x is present at mid
+    if (edge.b == b) return true;
+
+    // If x greater, ignore left half
+    if (edge.b < b) l = m + 1;
+
+    // If x is smaller, ignore right half
+    else
+      r = m - 1;
   }
+
   return false;
 }
 
@@ -34,38 +47,43 @@ __global__ void _cuda_generate_k_triangles(
     const node_t* nodes, const size_t* node_starts, size_t node_count,
     const cuda_edge_t* edges, size_t edge_count, cuda_triangle_t* triangles,
     size_t* triangle_count) {
-  size_t first_edge_id = (threadIdx.x + blockIdx.x * BLOCK_DIM_X) * EDGES_PER_THREAD;
+  size_t first_edge_id =
+      (threadIdx.x + blockIdx.x * BLOCK_DIM_X) * EDGES_PER_THREAD;
   size_t node_id = threadIdx.y + blockIdx.y * BLOCK_DIM_Y;
-  for (size_t edge_id = first_edge_id; edge_id < first_edge_id + EDGES_PER_THREAD; edge_id++) { 
-  if (edge_id < edge_count && node_id < node_count) {
-    node_t node = nodes[node_id];
-    size_t node_start = node_starts[node_id];
-    size_t node_degree = node_starts[node_id + 1] - node_start;
-    cuda_edge_t edge = edges[edge_id];
-    if (node <= edge.a) {
-      continue;
-    }
+  for (size_t edge_id = first_edge_id;
+       edge_id < first_edge_id + EDGES_PER_THREAD; edge_id++) {
+    if (edge_id < edge_count && node_id < node_count) {
+      node_t node = nodes[node_id];
+      size_t node_start = node_starts[node_id];
+      size_t node_degree = node_starts[node_id + 1] - node_start;
+      cuda_edge_t edge = edges[edge_id];
+      if (node <= edge.a) {
+        continue;
+      }
 
-    if (__edge_exist(node, edge.a, edges, node_start, node_degree) &&
-        __edge_exist(node, edge.b, edges, node_start, node_degree)) {
-      size_t ti = atomicAdd((unsigned long long*)triangle_count, 1);
+      if (__edge_exist(node, edge.a, edges, node_start, node_degree) &&
+          __edge_exist(node, edge.b, edges, node_start, node_degree)) {
+        size_t ti = atomicAdd((unsigned long long*)triangle_count, 1);
 #ifdef DEBUG
-      printf("gpu triangle %lu: %u %u %u\n", ti + 1, node, edge.a, edge.b);
+        printf("gpu triangle %lu: %u %u %u\n", ti + 1, node, edge.a, edge.b);
 #endif
-      //cuda_triangle_t triangle;
-      //triangle.a = node;
-      //triangle.b = edge.a;
-      //triangle.c = edge.b;
-      //    triangles[ti] = triangle;
+        // cuda_triangle_t triangle;
+        // triangle.a = node;
+        // triangle.b = edge.a;
+        // triangle.c = edge.b;
+        //    triangles[ti] = triangle;
+      }
     }
-  }
   }
 }
 
 void cuda_generate_k_triangles(
-    const std::vector<node_t>& nodes,
-    const std::vector<std::pair<node_t, node_t>>& edges,
+    std::vector<node_t> nodes, std::vector<std::pair<node_t, node_t>> edges,
     std::vector<std::tuple<node_t, node_t, node_t>>& triangle_k) {
+  // sort the edges first
+  std::sort(edges.begin(), edges.end());
+  std::sort(nodes.begin(), nodes.end());
+
   // preprocess edge starts
   std::vector<size_t> node_starts;
   std::vector<node_t> active_first_nodes;
@@ -95,18 +113,16 @@ void cuda_generate_k_triangles(
   cuda_triangle_t* d_triangles;
   gpuErrchk(
       cudaMalloc(&d_triangles, sizeof(cuda_triangle_t) * NODE_TRIANGLE_RATIO));
-  size_t* d_num_triangles;
-  gpuErrchk(cudaMalloc(&d_num_triangles, sizeof(size_t)));
 
   // copy nodes
   gpuErrchk(cudaMemcpyAsync(d_nodes, active_first_nodes.data(),
-                       sizeof(node_t) * active_first_nodes.size(),
-                       cudaMemcpyHostToDevice));
+                            sizeof(node_t) * active_first_nodes.size(),
+                            cudaMemcpyHostToDevice));
 
   // copy edge starts
   gpuErrchk(cudaMemcpyAsync(d_node_starts, node_starts.data(),
-                       sizeof(size_t) * node_starts.size(),
-                       cudaMemcpyHostToDevice));
+                            sizeof(size_t) * node_starts.size(),
+                            cudaMemcpyHostToDevice));
 
   // copy edges
   for (size_t ei = 0; ei < edges.size(); ei++) {
@@ -114,11 +130,12 @@ void cuda_generate_k_triangles(
     edge.a = edges[ei].first;
     edge.b = edges[ei].second;
     gpuErrchk(cudaMemcpyAsync(d_edges + ei, &edge, sizeof(cuda_edge_t),
-                         cudaMemcpyHostToDevice));
+                              cudaMemcpyHostToDevice));
   }
 
-  size_t num_triangles = 0;
-  gpuErrchk(cudaMemset(d_num_triangles, 0x0, sizeof(size_t)));
+  size_t* num_triangles;
+  gpuErrchk(cudaMallocManaged(&num_triangles, sizeof(size_t)));
+  *num_triangles = 0;
 
   size_t dim_nodes = (active_first_nodes.size() - 1) / BLOCK_DIM_Y + 1;
   size_t dim_edges = (edges.size() - 1) / (BLOCK_DIM_X * EDGES_PER_THREAD) + 1;
@@ -127,15 +144,12 @@ void cuda_generate_k_triangles(
 
   _cuda_generate_k_triangles<<<dim_grid, dim_block>>>(
       d_nodes, d_node_starts, active_first_nodes.size(), d_edges, edges.size(),
-      d_triangles, d_num_triangles);
+      d_triangles, num_triangles);
   gpuErrchk(cudaPeekAtLastError());
-
-  gpuErrchk(cudaMemcpyAsync(&num_triangles, d_num_triangles, sizeof(node_t),
-                       cudaMemcpyDeviceToHost));
 
   gpuErrchk(cudaDeviceSynchronize());
 
-  printf("gpu %lu triangles\n", num_triangles);
+  printf("gpu %lu triangles\n", *num_triangles);
 
   gpuErrchk(cudaFree(d_nodes));
   gpuErrchk(cudaFree(d_node_starts));

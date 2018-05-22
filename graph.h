@@ -9,7 +9,7 @@ class graph {
  public:
   graph(char* filename);
   size_t num_nodes() const;
-  std::vector<node_t> get_nodes() const;
+  void get_nodes(std::vector<node_t>& v_nodes) const;
   bool has_edge(node_t a, node_t b) const;
   std::vector<node_t> tera(size_t k, size_t n);
   size_t get_degree(node_t node) const;
@@ -23,7 +23,7 @@ class graph {
   size_t triangle_number(node_t node) const;
   bool has_edge_k(node_t a, node_t b) const;
   void remove_node(node_t node);
-  std::vector<std::pair<node_t, node_t>> get_edge_list_k() const;
+  void get_edge_list_k(std::vector<std::pair<node_t, node_t>>& ans) const;
 
   // edge lists and graph containers
   size_t k;

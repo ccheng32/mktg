@@ -13,11 +13,11 @@ LIBS=-L$(CUDALIB)/lib64 -lcudart
 
 ifeq ($(DEBUG),n)
 	CPPFLAGS+= -O3
-	NVCCFLAGS += -O3
+	NVCCFLAGS += -O3 --ptxas-options=-O3
 else
 	DEBUGFLAG= -O0 -g -DDEBUG
 	CPPFLAGS+= $(DEBUGFLAG)
-	NVCCFLAGS+= $(DEBUGFLAG) -G
+	NVCCFLAGS+= $(DEBUGFLAG) -G --ptxas-options=-O0
 endif
 
 ifeq ($(WARN),y)
