@@ -198,20 +198,14 @@ void graph::graph_k(size_t newk) {
 
       std::queue<node_t>().swap(bfs_q);
       node_dist.clear();
-
-#ifdef DEBUG
-//  printf("node %d expanded\n", center_node);
-#endif
     }
 
 #pragma omp critical
     {
-#ifdef DEBUG
-      printf("%lu edges to add\n", edges.size());
-#endif
       for (auto edge = edges.cbegin(); edge != edges.cend(); edge++) {
         add_undirected_edge_k(edge->first, edge->second, adj_list_k);
       }
+      edges.clear();
     }
   }
 
@@ -298,6 +292,7 @@ void graph::generate_k_triangles() {
       for (auto tri : local_k_triangles) {
         k_triangles.push_back(tri);
       }
+      local_k_triangles.clear();
     }
   }
   gettimeofday(&start, NULL);
