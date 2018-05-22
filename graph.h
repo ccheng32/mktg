@@ -31,6 +31,8 @@ class graph {
   std::unordered_map<node_t, std::unordered_set<node_t>> adj_list_copy;
   std::unordered_map<node_t, std::unordered_set<node_t>> adj_list_k;
   std::unordered_map<node_t, size_t> triangles_per_node;
+  std::unordered_map<node_t, std::vector<size_t>> triangle_indices_per_node;
+  std::vector<bool> active_triangles;
   std::vector<std::tuple<node_t, node_t, node_t>> k_triangles;
 };
 

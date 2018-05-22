@@ -40,15 +40,14 @@ std::vector<node_t> graph::tera(size_t k, size_t n) {
     struct timeval end;
     gettimeofday(&end, NULL);
     //#ifdef DEBUG
-    printf("removing node %u with tnum %lu, time: %lf, removal time: %lf, score: %lf\n",
+    printf("removing node %u with tnum %lu, time: %lf, removal time: %lf\n",
            max_triangle_node, max_triangle_number,
            (1000000.0 * (end.tv_sec - start.tv_sec) + end.tv_usec -
             start.tv_usec) /
                1000000.0,
            (1000000.0 * (end.tv_sec - remove_start.tv_sec) + end.tv_usec -
             remove_start.tv_usec) /
-               1000000.0,
-           (double)k_triangles.size() / ans.size());
+               1000000.0);
     //#endif
   }
 

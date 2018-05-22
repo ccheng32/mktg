@@ -76,37 +76,25 @@ void decrement_node_triangle_count(
   }
 }
 
-static void quick_delete_triangle(
-    std::vector<std::tuple<node_t, node_t, node_t>>& vec, size_t idx) {
-  vec[idx] = vec.back();
-  vec.pop_back();
-}
-
 void graph::remove_node(node_t node) {
   remove_node_gen(node, adj_list);
 
   // update triangles and triangle number
-  std::vector<size_t> remove_indices;
-
-#pragma omp parallel for
-  for (size_t ti = 0; ti < k_triangles.size(); ti++) {
-    if (triangle_contains(k_triangles[ti], node)) {
-#pragma omp critical
-      { remove_indices.push_back(ti); }
+  auto iter = triangle_indices_per_node.find(node);
+  if (iter == triangle_indices_per_node.end()) {
+    fprintf(stderr, "removing non-existent node %d\n", node);
+    return;
+  } else {
+    auto remove_indices = iter->second;
+    for (size_t remove_index : remove_indices) {
+      if (active_triangles[remove_index]) {
+        // triangle still active
+        active_triangles[remove_index] = false;
+        decrement_node_triangle_count(std::get<0>(k_triangles[remove_index]), triangles_per_node);
+        decrement_node_triangle_count(std::get<1>(k_triangles[remove_index]), triangles_per_node);
+        decrement_node_triangle_count(std::get<2>(k_triangles[remove_index]), triangles_per_node);
+      }
     }
-  }
-
-  for (size_t remove_index : remove_indices) {
-    decrement_node_triangle_count(std::get<0>(k_triangles[remove_index]),
-                                  triangles_per_node);
-    decrement_node_triangle_count(std::get<1>(k_triangles[remove_index]),
-                                  triangles_per_node);
-    decrement_node_triangle_count(std::get<2>(k_triangles[remove_index]),
-                                  triangles_per_node);
-  }
-  for (int ri = remove_indices.size() - 1; ri >= 0; ri--) {
-    size_t remove_index = remove_indices[ri];
-    quick_delete_triangle(k_triangles, remove_index);
   }
 }
 
@@ -239,18 +227,30 @@ void graph::get_edge_list_k(std::vector<std::pair<node_t, node_t>>& ans) const {
 }
 
 void increment_node_triangle_count(
-    node_t node, std::unordered_map<node_t, size_t>& triangles_per_node) {
+    node_t node, std::unordered_map<node_t, size_t>& triangles_per_node, 
+    size_t tri_index, std::unordered_map<node_t, std::vector<size_t>>& triangle_indices_per_node) {
+  // number of triangles a node is involved
   auto iter = triangles_per_node.find(node);
   if (iter == triangles_per_node.end()) {
     triangles_per_node[node] = 1;
   } else {
     iter->second++;
   }
+
+  // the index of triangles that a node is involved
+  auto iter_i = triangle_indices_per_node.find(node);
+  if (iter_i == triangle_indices_per_node.end()) {
+    triangle_indices_per_node[node] = std::vector<size_t>(1, tri_index);
+  } else {
+    iter_i->second.push_back(tri_index);
+  }
 }
 
 void graph::generate_k_triangles() {
   k_triangles.clear();
   triangles_per_node.clear();
+  triangle_indices_per_node.clear();
+  active_triangles.clear();
 
   // get a copy of the k hop graph in edge list form
   std::vector<std::pair<node_t, node_t>> edge_list_k;
@@ -262,7 +262,7 @@ void graph::generate_k_triangles() {
   // GPU TESTING START
   struct timeval start, end;
   gettimeofday(&start, NULL);
-  auto k_triangles_gpu = k_triangles;
+  std::vector<std::tuple<node_t, node_t, node_t>> k_triangles_gpu;
   cuda_generate_k_triangles(nodes, edge_list_k, k_triangles_gpu);
   gettimeofday(&end, NULL);
   printf("in %lf seconds\n", (1000000.0 * (end.tv_sec - start.tv_sec) +
@@ -290,26 +290,22 @@ void graph::generate_k_triangles() {
 #pragma omp critical
     {
       for (auto tri : local_k_triangles) {
+        increment_node_triangle_count(std::get<0>(tri), triangles_per_node, k_triangles.size(), triangle_indices_per_node);
+        increment_node_triangle_count(std::get<1>(tri), triangles_per_node, k_triangles.size(), triangle_indices_per_node);
+        increment_node_triangle_count(std::get<2>(tri), triangles_per_node, k_triangles.size(), triangle_indices_per_node);
         k_triangles.push_back(tri);
+        active_triangles.push_back(true);
       }
       local_k_triangles.clear();
     }
   }
+
+  std::fill(active_triangles.begin(), active_triangles.end(), true);
   gettimeofday(&start, NULL);
   printf(
-      "cpu %lu triangles in %lf seconds\n", k_triangles.size(),
+      "cpu %lu triangles in %lf seconds\n", active_triangles.size(),
       (1000000.0 * (start.tv_sec - end.tv_sec) + start.tv_usec - end.tv_usec) /
           1000000.0);
-
-  for (auto triangle : k_triangles) {
-    increment_node_triangle_count(std::get<0>(triangle), triangles_per_node);
-    increment_node_triangle_count(std::get<1>(triangle), triangles_per_node);
-    increment_node_triangle_count(std::get<2>(triangle), triangles_per_node);
-  }
-
-#ifdef DEBUG
-  printf("counted %lu triangles\n", k_triangles.size());
-#endif
 }
 
 size_t graph::num_nodes() const { return adj_list.size(); }
