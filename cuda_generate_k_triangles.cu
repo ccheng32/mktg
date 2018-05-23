@@ -7,7 +7,7 @@
 #error "Block size too big"
 #endif
 
-#define NODE_TRIANGLE_RATIO 1000
+#define MAX_TRIANGLE_NUM 400000000 
 #define EDGES_PER_THREAD 1
 
 #define gpuErrchk(ans) \
@@ -67,11 +67,11 @@ __global__ void _cuda_generate_k_triangles(
 #ifdef DEBUG
         printf("gpu triangle %lu: %u %u %u\n", ti + 1, node, edge.a, edge.b);
 #endif
-        // cuda_triangle_t triangle;
-        // triangle.a = node;
-        // triangle.b = edge.a;
-        // triangle.c = edge.b;
-        //    triangles[ti] = triangle;
+        cuda_triangle_t triangle;
+        triangle.a = node;
+        triangle.b = edge.a;
+        triangle.c = edge.b;
+        triangles[ti] = triangle;
       }
     }
   }
@@ -112,7 +112,7 @@ void cuda_generate_k_triangles(
   gpuErrchk(cudaMalloc(&d_edges, sizeof(cuda_edge_t) * edges.size()));
   cuda_triangle_t* d_triangles;
   gpuErrchk(
-      cudaMalloc(&d_triangles, sizeof(cuda_triangle_t) * NODE_TRIANGLE_RATIO));
+      cudaMallocManaged(&d_triangles, sizeof(cuda_triangle_t) * MAX_TRIANGLE_NUM));
 
   // copy nodes
   gpuErrchk(cudaMemcpyAsync(d_nodes, active_first_nodes.data(),
