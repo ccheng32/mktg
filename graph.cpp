@@ -2,7 +2,6 @@
 #include <sys/time.h>
 #include <cstdio>
 #include <queue>
-#include "cuda_graph.h"
 
 static void add_edge_gen(
     node_t a, node_t b,
@@ -90,9 +89,12 @@ void graph::remove_node(node_t node) {
       if (active_triangles[remove_index]) {
         // triangle still active
         active_triangles[remove_index] = false;
-        decrement_node_triangle_count(std::get<0>(k_triangles[remove_index]), triangles_per_node);
-        decrement_node_triangle_count(std::get<1>(k_triangles[remove_index]), triangles_per_node);
-        decrement_node_triangle_count(std::get<2>(k_triangles[remove_index]), triangles_per_node);
+        decrement_node_triangle_count(std::get<0>(k_triangles[remove_index]),
+                                      triangles_per_node);
+        decrement_node_triangle_count(std::get<1>(k_triangles[remove_index]),
+                                      triangles_per_node);
+        decrement_node_triangle_count(std::get<2>(k_triangles[remove_index]),
+                                      triangles_per_node);
       }
     }
   }
@@ -200,7 +202,6 @@ void graph::graph_k(size_t newk) {
 #ifdef DEBUG
   printf("k-hop adj list generated\n");
 #endif
-  generate_k_triangles();
   return;
 }
 
@@ -227,8 +228,9 @@ void graph::get_edge_list_k(std::vector<std::pair<node_t, node_t>>& ans) const {
 }
 
 void increment_node_triangle_count(
-    node_t node, std::unordered_map<node_t, size_t>& triangles_per_node, 
-    size_t tri_index, std::unordered_map<node_t, std::vector<size_t>>& triangle_indices_per_node) {
+    node_t node, std::unordered_map<node_t, size_t>& triangles_per_node,
+    size_t tri_index, std::unordered_map<node_t, std::vector<size_t>>&
+                          triangle_indices_per_node) {
   // number of triangles a node is involved
   auto iter = triangles_per_node.find(node);
   if (iter == triangles_per_node.end()) {
@@ -259,17 +261,8 @@ void graph::generate_k_triangles() {
   std::vector<node_t> nodes;
   get_nodes(nodes);
 
-  // GPU TESTING START
   struct timeval start, end;
-  gettimeofday(&start, NULL);
-  std::vector<std::tuple<node_t, node_t, node_t>> k_triangles_gpu;
-  cuda_generate_k_triangles(nodes, edge_list_k, k_triangles_gpu);
   gettimeofday(&end, NULL);
-  printf("in %lf seconds\n", (1000000.0 * (end.tv_sec - start.tv_sec) +
-                              end.tv_usec - start.tv_usec) /
-                                 1000000.0);
-// GPU TESTING END
-
 #pragma omp parallel
   {
     std::vector<std::tuple<node_t, node_t, node_t>> local_k_triangles;
@@ -290,9 +283,15 @@ void graph::generate_k_triangles() {
 #pragma omp critical
     {
       for (auto tri : local_k_triangles) {
-        increment_node_triangle_count(std::get<0>(tri), triangles_per_node, k_triangles.size(), triangle_indices_per_node);
-        increment_node_triangle_count(std::get<1>(tri), triangles_per_node, k_triangles.size(), triangle_indices_per_node);
-        increment_node_triangle_count(std::get<2>(tri), triangles_per_node, k_triangles.size(), triangle_indices_per_node);
+        increment_node_triangle_count(std::get<0>(tri), triangles_per_node,
+                                      k_triangles.size(),
+                                      triangle_indices_per_node);
+        increment_node_triangle_count(std::get<1>(tri), triangles_per_node,
+                                      k_triangles.size(),
+                                      triangle_indices_per_node);
+        increment_node_triangle_count(std::get<2>(tri), triangles_per_node,
+                                      k_triangles.size(),
+                                      triangle_indices_per_node);
         k_triangles.push_back(tri);
         active_triangles.push_back(true);
       }

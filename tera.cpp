@@ -1,8 +1,10 @@
 #include <sys/time.h>
+#include "cuda_graph.h"
 #include "graph.h"
 
 std::vector<node_t> graph::tera(size_t k, size_t n) {
   this->graph_k(k);
+  generate_k_triangles();
 
   std::vector<node_t> ans;
   get_nodes(ans);
@@ -54,4 +56,27 @@ std::vector<node_t> graph::tera(size_t k, size_t n) {
   restore_adj_list();
   this->graph_k(1);
   return ans;
+}
+
+std::vector<node_t> graph::cuda_tera(size_t k, size_t n) {
+  this->graph_k(k);
+
+  // get a copy of the k hop graph in edge list form
+  std::vector<std::pair<node_t, node_t>> edge_list_k;
+  get_edge_list_k(edge_list_k);
+
+  std::vector<node_t> nodes;
+  get_nodes(nodes);
+
+  // GPU TESTING START
+  struct timeval start, end;
+  gettimeofday(&start, NULL);
+  std::vector<std::tuple<node_t, node_t, node_t>> k_triangles_gpu;
+  cuda_generate_k_triangles(nodes, edge_list_k, k_triangles_gpu, n);
+  gettimeofday(&end, NULL);
+  printf("in %lf seconds\n", (1000000.0 * (end.tv_sec - start.tv_sec) +
+                              end.tv_usec - start.tv_usec) /
+                                 1000000.0);
+  // GPU TESTING END
+  return std::vector<node_t>();
 }

@@ -12,6 +12,7 @@ class graph {
   void get_nodes(std::vector<node_t>& v_nodes) const;
   bool has_edge(node_t a, node_t b) const;
   std::vector<node_t> tera(size_t k, size_t n);
+  std::vector<node_t> cuda_tera(size_t k, size_t n);
   size_t get_degree(node_t node) const;
 
  private:

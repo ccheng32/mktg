@@ -17,7 +17,7 @@ int main(int argc, char** argv) {
   }
 
   graph g(graph_filename);
-  auto ans = g.tera(k, n);
+  auto ans = g.cuda_tera(k, n);
 
   std::sort(ans.begin(), ans.end());
 
